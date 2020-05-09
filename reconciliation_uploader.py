@@ -18,25 +18,18 @@ def compare_ship_dates(cluster_one, cluster_two):
   elif cluster_one.last_ship_date == cluster_two.last_ship_date:
     return 0
   else:
-    return 1
+    return 0
 
 
 def compare(cluster_one, cluster_two) -> int:
-  diff_one = total_diff(cluster_one)
-  diff_two = total_diff(cluster_two)
-
-  # If both negative, return the ship date diff. If only one is
-  # negative, that one should come first. If both are nonnegative, use the group
-  if diff_one < 0 and diff_two < 0:
-    return compare_ship_dates(cluster_one, cluster_two)
-  elif diff_one < 0:
+  if cluster_two.verified:
     return -1
-  elif diff_two < 0:
-    return 1
-  elif cluster_one.group < cluster_two.group:
-    return -1
-  elif cluster_one.group == cluster_two.group:
-    return compare_ship_dates(cluster_one, cluster_two)
+ # elif cluster_one.verified and  cluster_two.verified:
+ #     return -1
+  elif cluster_one.verified and  cluster_two.below_cost:
+      return 0
+  elif not cluster_one.verified and  cluster_two.below_cost:
+      return -1
   else:
     return 1
 
@@ -115,6 +108,13 @@ def get_conditional_formatting_body(service, base_sheet_id, tab_title,
       "startColumnIndex": 15,
       "endColumnIndex": 16
   }
+  checkbox_range_3 = {
+      "sheetId": int(tab_id),
+      "startRowIndex": 1,
+      "endRowIndex": num_objects + 1,
+      "startColumnIndex": 16,
+      "endColumnIndex": 17
+  }
   total_diff_range = {
       "sheetId": int(tab_id),
       "startRowIndex": 1,
@@ -148,6 +148,16 @@ def get_conditional_formatting_body(service, base_sheet_id, tab_title,
       {
           "setDataValidation": {
               "range": checkbox_range_2,
+              "rule": {
+                  "condition": {
+                      'type': 'BOOLEAN'
+                  }
+              }
+          }
+      },
+      {
+          "setDataValidation": {
+              "range": checkbox_range_3,
               "rule": {
                   "condition": {
                       'type': 'BOOLEAN'
@@ -271,6 +281,7 @@ class ReconciliationUploader:
       pos = set()
       non_reimbursed_trackings = set()
       total_tracked_cost = 0.0
+
       for candidate in candidate_downloads:
         pos.update(candidate.purchase_orders)
         non_reimbursed_trackings.update(candidate.non_reimbursed_trackings)
@@ -314,6 +325,7 @@ class ReconciliationUploader:
             sheet_cluster.orders == cluster.orders):
           cluster.manual_override = sheet_cluster.manual_override
           cluster.below_cost = sheet_cluster.below_cost
+          cluster.verified = sheet_cluster.verified
 
   def find_candidate_downloads(self, cluster, downloaded_clusters) -> list:
     result = []
