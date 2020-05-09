@@ -200,8 +200,6 @@ def main():
   parser.add_argument("--groups", nargs="*")
   args, _ = parser.parse_known_args()
 
-  print(f"args: {args.groups}")
-
   with open(CONFIG_FILE, 'r') as config_file_stream:
     config = yaml.safe_load(config_file_stream)
 
