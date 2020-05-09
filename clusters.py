@@ -29,7 +29,8 @@ class Cluster:
                 non_reimbursed_trackings=set(),
                 cancelled_items=[],
                 last_delivery_date='',
-                below_cost=False) -> None:
+                below_cost=False,
+                verified=False) -> None:
     self.orders = orders
     self.trackings = trackings
     self.group = group
@@ -46,6 +47,7 @@ class Cluster:
     self.cancelled_items = cancelled_items
     self.last_delivery_date = last_delivery_date
     self.below_cost = below_cost
+    self.verified = verified
 
   def __setstate__(self, state) -> None:
     self._initiate(**state)
@@ -62,7 +64,7 @@ class Cluster:
         "Orders", "Trackings", "To Email", "Amount Billed", "Amount Reimbursed",
         "Non-Reimbursed Trackings", "Last Ship Date",
         "Last Delivery Date (Est.)", "POs", "Group", "Manual Cost Adjustment",
-        "Manual Override", "Total Diff", "Notes", "Cancelled Items", "Below Cost"
+        "Manual Override", "Total Diff", "Notes", "Cancelled Items", "Below Cost","Verified"
     ]
 
   def to_row(self) -> list:
@@ -73,7 +75,7 @@ class Cluster:
         self.last_delivery_date, "'" + ", ".join(self.purchase_orders),
         self.group, self.adjustment, self.manual_override,
         '=INDIRECT(CONCAT("D", ROW())) - INDIRECT(CONCAT("E", ROW())) - INDIRECT(CONCAT("K", ROW()))',
-        self.notes, ", ".join(self.cancelled_items), self.below_cost
+        self.notes, ", ".join(self.cancelled_items), self.below_cost, self.verified
     ]
 
   def merge_with(self, other) -> None:
@@ -100,6 +102,7 @@ class Cluster:
     self.non_reimbursed_trackings.update(other.non_reimbursed_trackings)
     self.cancelled_items.extend(other.cancelled_items)
     self.below_cost = False
+    self.verified = False
 
 
 def find_cluster(all_clusters, tracking) -> Any:
@@ -125,6 +128,7 @@ def update_clusters(all_clusters, trackings) -> None:
         override_overridden = True
       cluster.manual_override = False
       cluster.below_cost = False
+      cluster.verified = False
     cluster.orders.update(tracking.order_ids)
     cluster.trackings.add(tracking.tracking_number)
     cluster.last_ship_date = max(cluster.last_ship_date,
@@ -225,9 +229,11 @@ def from_row(header, row) -> Cluster:
                     ] if cancelled_items_str else []
   below_cost = row[header.index(
       'Below Cost')] if 'Below Cost' in header else False
+  verified = row[header.index(
+      'Verified')] if 'Verified' in header else False
   cluster = Cluster(group)
   cluster._initiate(orders, trackings, group, expected_cost, tracked_cost,
                     last_ship_date, pos, email_ids, adjustment, to_email, notes,
                     manual_override, non_reimbursed_trackings, cancelled_items,
-                    last_delivery_date, below_cost)
+                    last_delivery_date, below_cost, verified)
   return cluster
