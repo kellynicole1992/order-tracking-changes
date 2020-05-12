@@ -26,6 +26,7 @@ def fill_costs(all_clusters, config):
     for order_id in cluster.orders:
       try:
         order_info = order_info_retriever.get_order_info(order_id)
+        #print(order_info)
       except Exception as e:
         print(
             f"Exception when getting order info for {order_id}. Please check the oldest email associated with that order. Skipping..."
@@ -68,14 +69,16 @@ def get_new_tracking_pos_costs_maps(config, group_site_manager, args):
 
   trackings_to_costs_map = {}
   po_to_cost_map = {}
+  trackings_to_po_map = {}
   for group in groups:
-    group_trackings_to_po, group_po_to_cost = group_site_manager.get_new_tracking_pos_costs_maps_with_retry(
+    trackings_to_po, group_trackings_to_po, group_po_to_cost = group_site_manager.get_new_tracking_pos_costs_maps_with_retry(
         group)
     trackings_to_costs_map.update(group_trackings_to_po)
     po_to_cost_map.update(group_po_to_cost)
+    trackings_to_po_map.update(trackings_to_po)
     #print(f"po to group tracking: {group_trackings_to_po}")
 
-  return (trackings_to_costs_map, po_to_cost_map)
+  return (trackings_to_po_map, trackings_to_costs_map, po_to_cost_map)
 
 
 def map_clusters_by_tracking(all_clusters):
@@ -113,7 +116,6 @@ def merge_by_trackings_tuples(clusters_by_tracking, trackings_to_cost):
 
 def fill_costs_new(clusters_by_tracking, trackings_to_cost, po_to_cost, args):
   for cluster in clusters_by_tracking.values():
-  #  print(cluster.purchase_orders)
     # Reset the cluster if it's included in the groups
     if args.groups and cluster.group not in args.groups:
       continue
@@ -132,12 +134,12 @@ def fill_costs_new(clusters_by_tracking, trackings_to_cost, po_to_cost, args):
           cluster.non_reimbursed_trackings.remove(tracking)
 
   # Next, manual PO fixes
-  for cluster in clusters_by_tracking.values():
-    pos = cluster.purchase_orders
-    if pos:
-      for po in pos:
-        cluster.tracked_cost += float(po_to_cost.get(po, 0.0))
-       #print(po)
+ # for cluster in clusters_by_tracking.values():
+ #   pos = cluster.purchase_orders
+ #   if pos:
+ #     for po in pos:
+ #       cluster.tracked_cost += float(po_to_cost.get(po, 0.0))
+
 
 
 def fill_cancellations(all_clusters, config):
@@ -172,25 +174,16 @@ def reconcile_new(config, args):
   driver_creator = DriverCreator()
   group_site_manager = GroupSiteManager(config, driver_creator)
 
-  trackings_to_cost, po_to_cost = get_new_tracking_pos_costs_maps(
+  trackings_to_po, trackings_to_cost, po_to_cost = get_new_tracking_pos_costs_maps(
       config, group_site_manager, args)
 
- # print(f"trackings: {trackings_to_cost}")
-  #print(f"pos: {po_to_cost}")
-
-
   clusters_by_tracking = map_clusters_by_tracking(all_clusters)
-
- #tracking_to_po, po_to_cost = _get_usa_tracking_pos_costs_maps(self)
-  #fill_purchase_orders(all_clusters, tracking_to_po, args)
 
   merge_by_trackings_tuples(clusters_by_tracking, trackings_to_cost)
 
   fill_costs_new(clusters_by_tracking, trackings_to_cost, po_to_cost, args)
 
   fill_cancellations(all_clusters, config)
- # print(all_clusters)
-  trackings_to_po = get_usa_purchase_orders(config, driver_creator)
   fill_purchase_orders(all_clusters, trackings_to_po, args)
   reconciliation_uploader.download_upload_clusters_new(all_clusters)
 
@@ -199,6 +192,8 @@ def main():
   parser = argparse.ArgumentParser(description='Reconciliation script')
   parser.add_argument("--groups", nargs="*")
   args, _ = parser.parse_known_args()
+
+  print(f"args: {args.groups}")
 
   with open(CONFIG_FILE, 'r') as config_file_stream:
     config = yaml.safe_load(config_file_stream)
@@ -218,73 +213,6 @@ def fill_purchase_orders(all_clusters, tracking_to_po, args):
         cluster.purchase_orders.add(tracking_to_po[tracking])
         #cluster.non_reimbursed_trackings.remove(tracking)
 
-def get_usa_purchase_orders(config, driver_creator):
-    print("Getting USA POs")
-    result = {}
-    trackings_to_cost={}
-    po_to_cost ={}
-    driver = driver_creator.new()
-    driver.get("https://usabuying.group/login")
-    group_config = config['groups']['usa']
-    driver.find_element_by_name("credentials").send_keys(
-        group_config['username'])
-    driver.find_element_by_name("password").send_keys(group_config['password'])
-    # for some reason there's an invalid login button in either the first or second array spot (randomly)
-    for element in driver.find_elements_by_name("log-me-in"):
-      try:
-        element.click()
-      except:
-        pass
-    time.sleep(2)
-    try:
-      with tqdm(desc='Fetching USA check-ins', unit='page') as pbar:
-        # Tell the USA tracking search to find received tracking numbers from the beginning of time
-        driver.get("https://usabuying.group/trackings")
-        time.sleep(3)
-        date_filter_div = driver.find_element_by_class_name(
-            "reports-dates-filter-cnt")
-        date_filter_btn = date_filter_div.find_element_by_tag_name("button")
-        date_filter_btn.click()
-        time.sleep(1)
-
-        date_filter_div.find_element_by_xpath(
-            '//a[contains(text(), "None")]').click()
-        time.sleep(2)
-
-        status_dropdown = driver.find_element_by_name("filterPurchaseid")
-        status_dropdown.click()
-        time.sleep(1)
-
-        status_dropdown.find_element_by_xpath("//*[text()='Received']").click()
-        time.sleep(1)
-
-        driver.find_element_by_xpath(
-            "//i[contains(@class, 'fa-search')]").click()
-        time.sleep(4)
-        driver.find_element_by_class_name('react-bs-table-pagination').find_element_by_tag_name('button').click()
-        driver.find_element_by_css_selector("a[data-page='100']").click()
-
-
-        while True:
-          time.sleep(4)
-          table = driver.find_element_by_class_name("react-bs-container-body")
-          rows = table.find_elements_by_tag_name('tr')
-          for row in rows:
-            entries = row.find_elements_by_tag_name('td')
-            tracking = entries[2].text
-            purchase_order = entries[3].text.split(' ')[0]
-            result[tracking] = purchase_order
-
-          pbar.update()
-          next_page_button = driver.find_elements_by_xpath(
-              "//li[contains(@title, 'next page')]")
-          if next_page_button:
-            next_page_button[0].find_element_by_tag_name('a').click()
-          else:
-            break
-      return result
-    finally:
-      driver.close()
 
 if __name__ == "__main__":
   main()      
