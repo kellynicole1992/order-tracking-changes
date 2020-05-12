@@ -91,43 +91,44 @@ class GroupSiteManager:
       print("Loading BFMR emails")
       _, costs_map = self._get_bfmr_costs()
       trackings_map = {}
+      tracking_to_po = {}
       for tracking, cost in costs_map.items():
         trackings_map[(tracking,)] = cost
-      return (trackings_map, costs_map)
+      return tracking_to_po, trackings_map, costs_map
     elif group in self.melul_portal_groups:
       group_config = self.config['groups'][group]
       username = group_config['username']
       password = group_config['password']
-      _, po_cost, trackings_cost = self._melul_get_tracking_pos_costs_maps(
+      tracking_to_po, po_cost, trackings_cost = self._melul_get_tracking_pos_costs_maps(
           group, username, password)
-
       if 'archives' in group_config:
         for archive_group in group_config['archives']:
           print(f"Loading archive {archive_group}")
           if not self.archive_manager.has_archive(archive_group):
-            _, archive_po_cost, archive_trackings_cost = self._melul_get_tracking_pos_costs_maps(
+            archive_tracking_to_po, archive_po_cost, archive_trackings_cost = self._melul_get_tracking_pos_costs_maps(
                 archive_group, username, password)
             self.archive_manager.put_archive(archive_group, archive_po_cost,
-                                             archive_trackings_cost)
+                                             archive_trackings_cost,archive_tracking_to_po)
 
           archive_po_cost, archive_trackings_cost = self.archive_manager.get_archive(
               archive_group)
           po_cost.update(archive_po_cost)
           trackings_cost.update(archive_trackings_cost)
-
-      return trackings_cost, po_cost
+         # tracking_to_po.update(archive_tracking_to_po)
+      return tracking_to_po, trackings_cost, po_cost
     elif group == "usa":
       print("Loading group usa")
       return asyncio.run(self._get_usa_tracking_pos_prices())
     elif group == "yrcw":
       print("Loading yrcw")
       return self._get_yrcw_tracking_pos_prices()
-    return (dict(), dict())
+    return (dict(), dict(), dict())
 
   # returns ((trackings) -> cost, po -> cost) maps
   def _get_yrcw_tracking_pos_prices(self):
     tracking_cost_map = {}
     po_cost_map = {}
+    tracking_to_po_map = {}
     driver = self._login_yrcw()
     try:
       nav_home = driver.find_element_by_id('nav-home')
@@ -150,7 +151,7 @@ class GroupSiteManager:
           print("Found last YRCW row")
     finally:
       driver.close()
-    return tracking_cost_map, po_cost_map
+    return tracking_to_po_map, tracking_cost_map, po_cost_map
 
   def _get_usa_login_headers(self):
     group_config = self.config['groups']['usa']
@@ -205,6 +206,8 @@ class GroupSiteManager:
       po_id = entry['purchase_id']
       pos_to_prices[po_id] = float(entry['purchase']['amount'])
     tracking_numbers = [entry['tracking_number'] for entry in all_entries]
+    tracking_to_po ={}
+    tracking_to_po = self._get_usa_tracking_to_purchase_order()
     async with aiohttp.ClientSession(headers=headers) as session:
       tracking_tuples_to_prices = {}
       tasks = []
@@ -213,7 +216,8 @@ class GroupSiteManager:
             self._retrieve_usa_tracking_price(tracking_number, session,
                                               tracking_tuples_to_prices))
       await asyncio.gather(*tasks)
-      return tracking_tuples_to_prices, pos_to_prices
+
+      return tracking_to_po, tracking_tuples_to_prices, pos_to_prices
 
 
   def _upload_usa(self, numbers) -> None:
@@ -540,7 +544,7 @@ class GroupSiteManager:
 
   def _get_usa_tracking_to_purchase_order(self) -> dict:
     result = {}
-    trackings_to_cost, po_to_cost ={}
+    #trackings_to_cost, po_to_cost ={}
     driver = self._login_usa()
     try:
       with tqdm(desc='Fetching USA check-ins', unit='page') as pbar:
