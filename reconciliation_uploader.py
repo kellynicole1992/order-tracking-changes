@@ -31,7 +31,10 @@ def compare(cluster_one, cluster_two) -> int:
   elif not cluster_one.verified and  cluster_two.below_cost:
       return -1
   else:
-    return 1
+    if total_diff(cluster_one) < total_diff(cluster_two):
+      return 1
+    else: 
+      return 0
 
 
 def has_formatting(service, base_sheet_id, ranges):
@@ -105,15 +108,15 @@ def get_conditional_formatting_body(service, base_sheet_id, tab_title,
       "sheetId": int(tab_id),
       "startRowIndex": 1,
       "endRowIndex": num_objects + 1,
-      "startColumnIndex": 15,
-      "endColumnIndex": 16
+      "startColumnIndex": 16,
+      "endColumnIndex": 17
   }
   checkbox_range_3 = {
       "sheetId": int(tab_id),
       "startRowIndex": 1,
       "endRowIndex": num_objects + 1,
-      "startColumnIndex": 16,
-      "endColumnIndex": 17
+      "startColumnIndex": 13,
+      "endColumnIndex": 14
   }
   total_diff_range = {
       "sheetId": int(tab_id),
