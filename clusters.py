@@ -64,7 +64,7 @@ class Cluster:
         "Orders", "Trackings", "To Email", "Amount Billed", "Amount Reimbursed",
         "Non-Reimbursed Trackings", "Last Ship Date",
         "Last Delivery Date (Est.)", "POs", "Group", "Manual Cost Adjustment",
-        "Manual Override", "Total Diff", "Notes", "Cancelled Items", "Below Cost","Verified"
+        "Manual Override", "Total Diff","Verified", "Notes", "Cancelled Items", "Below Cost"
     ]
 
   def to_row(self) -> list:
@@ -74,8 +74,8 @@ class Cluster:
         ", ".join(self.non_reimbursed_trackings), self.last_ship_date,
         self.last_delivery_date, "'" + ", ".join(self.purchase_orders),
         self.group, self.adjustment, self.manual_override,
-        '=INDIRECT(CONCAT("D", ROW())) - INDIRECT(CONCAT("E", ROW())) - INDIRECT(CONCAT("K", ROW()))',
-        self.notes, ", ".join(self.cancelled_items), self.below_cost, self.verified
+        '=INDIRECT(CONCAT("D", ROW())) - INDIRECT(CONCAT("E", ROW())) - INDIRECT(CONCAT("K", ROW()))', self.verified,
+        self.notes, ", ".join(self.cancelled_items), self.below_cost
     ]
 
   def merge_with(self, other) -> None:
