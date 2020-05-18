@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 from lib.archive_manager import ArchiveManager
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import Select  
 from tqdm import tqdm
 from typing import Any, Dict
 
@@ -131,6 +132,16 @@ class GroupSiteManager:
     tracking_to_po_map = {}
     driver = self._login_yrcw()
     try:
+      time.sleep(5)  # it can take a bit to load    
+      # show all trackings, not just non-paid   
+      driver.find_element_by_css_selector('button[title="Filters"]').click()    
+      time.sleep(2)   
+      select = Select(driver.find_element_by_tag_name('select'))    
+      select.select_by_visible_text('Any')    
+      driver.find_element_by_css_selector(    
+          'div.modal-footer .btn-primary').click()    
+      time.sleep(2)   
+      # next load the actual data
       nav_home = driver.find_element_by_id('nav-home')
       table = nav_home.find_element_by_tag_name('table')
       body = table.find_element_by_tag_name('tbody')
@@ -144,11 +155,8 @@ class GroupSiteManager:
           if len(tracking) == 30:
             tracking = tracking[8:]
           value = float(tds[4].text.replace('$', '').replace(',', ''))
-          tracking_cost_map[(tracking,)] = value
-          po_cost_map[tracking] = value
-          print(f"YRCW: {tracking}: {value}")
-        else:
-          print("Found last YRCW row")
+          tracking_cost_map[(tracking,)] += value
+          po_cost_map[tracking] += value
     finally:
       driver.close()
     return tracking_to_po_map, tracking_cost_map, po_cost_map
@@ -613,4 +621,3 @@ class GroupSiteManager:
     driver.find_element_by_class_name(
         'react-bs-table-pagination').find_element_by_tag_name('button').click()
     driver.find_element_by_css_selector("a[data-page='100']").click()
-
