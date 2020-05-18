@@ -92,8 +92,6 @@ class OrderInfoRetriever:
       return {}
 
     raw_email = str(data[0][1])
-    if(order_id =='BBY01-805918986556'):
-      print(f"BBY email - {order_id} : {raw_email}")
     regex_subtotal = r'Subtotal[^\$]*\$([\d,]+\.[\d]{2})'
     regex_tax = r'Tax:[^\$]*\$([\d,]+\.[\d]{2})'
     subtotal_match = re.search(regex_subtotal, raw_email)
