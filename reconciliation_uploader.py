@@ -297,6 +297,8 @@ class ReconciliationUploader:
         if (sheet_cluster.trackings == cluster.trackings and
             sheet_cluster.orders == cluster.orders):
           cluster.manual_override = sheet_cluster.manual_override
+          cluster.verified = sheet_cluster.verified
+          cluster.below_cost = sheet_cluster.below_cost
 
   def find_candidate_downloads(self, cluster, downloaded_clusters) -> list:
     result = []
