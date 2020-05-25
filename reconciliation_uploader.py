@@ -22,61 +22,42 @@ def compare_ship_dates(cluster_one, cluster_two):
 
 
 def compare(cluster_one, cluster_two) -> int:
-  if cluster_two.verified:
+  if cluster_two.verified: 
     return -1
- # elif cluster_one.verified and  cluster_two.verified:
- #     return -1
-  elif cluster_one.verified and  cluster_two.below_cost:
+  elif cluster_one.verified and  cluster_two.below_cost:  
+    return 0
+  elif not cluster_one.verified and  cluster_two.below_cost:  
+    return -1 
+  else: 
+    if total_diff(cluster_one) < total_diff(cluster_two): 
+      return 1  
+    else:   
       return 0
-  elif not cluster_one.verified and  cluster_two.below_cost:
-      return -1
-  else:
-    if total_diff(cluster_one) < total_diff(cluster_two):
-      return 1
-    else: 
-      return 0
-
 
 def has_formatting(service, base_sheet_id, ranges):
-  response = service.spreadsheets().get(
-      spreadsheetId=base_sheet_id, ranges=ranges).execute()
+  response = service.spreadsheets().get(spreadsheetId=base_sheet_id, ranges=ranges).execute()
   return "conditionalFormats" in str(response)
 
 
 def clear_protected_ranges(service, base_sheet_id, ranges):
-  response = service.spreadsheets().get(
-      spreadsheetId=base_sheet_id, ranges=ranges).execute()
+  response = service.spreadsheets().get(spreadsheetId=base_sheet_id, ranges=ranges).execute()
   sheet = response['sheets'][0]
   if "protectedRanges" in sheet:
     ids = [pr['protectedRangeId'] for pr in sheet['protectedRanges']]
     for id in ids:
       body = {"requests": [{"deleteProtectedRange": {"protectedRangeId": id}}]}
-      service.spreadsheets().batchUpdate(
-          spreadsheetId=base_sheet_id, body=body).execute()
+      service.spreadsheets().batchUpdate(spreadsheetId=base_sheet_id, body=body).execute()
 
 
 def clear_formatting(service, base_sheet_id, tab_id, ranges):
   while has_formatting(service, base_sheet_id, ranges):
-    body = {
-        "requests": [{
-            "deleteConditionalFormatRule": {
-                "sheetId": int(tab_id),
-                "index": 0
-            }
-        }]
-    }
-    service.spreadsheets().batchUpdate(
-        spreadsheetId=base_sheet_id, body=body).execute()
+    body = {"requests": [{"deleteConditionalFormatRule": {"sheetId": int(tab_id), "index": 0}}]}
+    service.spreadsheets().batchUpdate(spreadsheetId=base_sheet_id, body=body).execute()
 
 
-def get_conditional_formatting_body(service, base_sheet_id, tab_title,
-                                    num_objects):
-  response = service.spreadsheets().get(
-      spreadsheetId=base_sheet_id, ranges=[tab_title]).execute()
-  tab = [
-      sheet for sheet in response['sheets']
-      if sheet['properties']['title'] == tab_title
-  ][0]
+def get_conditional_formatting_body(service, base_sheet_id, tab_title, num_objects):
+  response = service.spreadsheets().get(spreadsheetId=base_sheet_id, ranges=[tab_title]).execute()
+  tab = [sheet for sheet in response['sheets'] if sheet['properties']['title'] == tab_title][0]
   tab_id = tab['properties']['sheetId']
 
   ranges = [tab_title]
@@ -104,19 +85,19 @@ def get_conditional_formatting_body(service, base_sheet_id, tab_title,
       "startColumnIndex": 11,
       "endColumnIndex": 12
   }
-  checkbox_range_2 = {
-      "sheetId": int(tab_id),
-      "startRowIndex": 1,
-      "endRowIndex": num_objects + 1,
-      "startColumnIndex": 16,
-      "endColumnIndex": 17
-  }
-  checkbox_range_3 = {
-      "sheetId": int(tab_id),
-      "startRowIndex": 1,
-      "endRowIndex": num_objects + 1,
-      "startColumnIndex": 13,
-      "endColumnIndex": 14
+  checkbox_range_2 = {  
+      "sheetId": int(tab_id), 
+      "startRowIndex": 1, 
+      "endRowIndex": num_objects + 1, 
+      "startColumnIndex": 16, 
+      "endColumnIndex": 17  
+  } 
+  checkbox_range_3 = {  
+      "sheetId": int(tab_id), 
+      "startRowIndex": 1, 
+      "endRowIndex": num_objects + 1, 
+      "startColumnIndex": 13, 
+      "endColumnIndex": 14  
   }
   total_diff_range = {
       "sheetId": int(tab_id),
@@ -148,26 +129,26 @@ def get_conditional_formatting_body(service, base_sheet_id, tab_title,
               }
           }
       },
-      {
-          "setDataValidation": {
-              "range": checkbox_range_2,
-              "rule": {
-                  "condition": {
-                      'type': 'BOOLEAN'
-                  }
-              }
-          }
-      },
-      {
-          "setDataValidation": {
-              "range": checkbox_range_3,
-              "rule": {
-                  "condition": {
-                      'type': 'BOOLEAN'
-                  }
-              }
-          }
-      },
+      { 
+            "setDataValidation": {  
+                "range": checkbox_range_2,  
+                "rule": { 
+                    "condition": {  
+                        'type': 'BOOLEAN' 
+                    } 
+                } 
+            } 
+        },  
+        { 
+            "setDataValidation": {  
+                "range": checkbox_range_3,  
+                "rule": { 
+                    "condition": {  
+                        'type': 'BOOLEAN' 
+                    } 
+                } 
+            } 
+        },
       {
           "addProtectedRange": {
               "protectedRange": {
@@ -194,11 +175,9 @@ def get_conditional_formatting_body(service, base_sheet_id, tab_title,
                   "ranges": [total_diff_range],
                   "booleanRule": {
                       "condition": {
-                          "type":
-                              "CUSTOM_FORMULA",
+                          "type": "CUSTOM_FORMULA",
                           "values": [{
-                              'userEnteredValue':
-                                  '=OR((K2:K)+(E2:E)=D2:D, L2:L=TRUE)'
+                              'userEnteredValue': '=OR((K2:K)+(E2:E)=D2:D, L2:L=TRUE)'
                           }]
                       },
                       "format": {
@@ -220,8 +199,7 @@ def get_conditional_formatting_body(service, base_sheet_id, tab_title,
                   "ranges": [total_diff_range],
                   "booleanRule": {
                       "condition": {
-                          "type":
-                              "CUSTOM_FORMULA",
+                          "type": "CUSTOM_FORMULA",
                           "values": [{
                               'userEnteredValue': '=(K2:K)+(E2:E)>D2:D'
                           }]
@@ -245,8 +223,7 @@ def get_conditional_formatting_body(service, base_sheet_id, tab_title,
                   "ranges": [total_diff_range],
                   "booleanRule": {
                       "condition": {
-                          "type":
-                              "CUSTOM_FORMULA",
+                          "type": "CUSTOM_FORMULA",
                           "values": [{
                               'userEnteredValue': '=(K2:K)+(E2:E)<D2:D'
                           }]
@@ -275,16 +252,15 @@ class ReconciliationUploader:
   def override_pos_and_costs(self, all_clusters):
     print("Filling manual PO adjustments")
     base_sheet_id = self.config['reconciliation']['baseSpreadsheetId']
-    downloaded_clusters = self.objects_to_sheet.download_from_sheet(
-        clusters.from_row, base_sheet_id, "Reconciliation v2")
+    downloaded_clusters = self.objects_to_sheet.download_from_sheet(clusters.from_row,
+                                                                    base_sheet_id,
+                                                                    "Reconciliation v2")
 
     for cluster in all_clusters:
-      candidate_downloads = self.find_candidate_downloads(
-          cluster, downloaded_clusters)
+      candidate_downloads = self.find_candidate_downloads(cluster, downloaded_clusters)
       pos = set()
       non_reimbursed_trackings = set()
       total_tracked_cost = 0.0
-
       for candidate in candidate_downloads:
         pos.update(candidate.purchase_orders)
         non_reimbursed_trackings.update(candidate.non_reimbursed_trackings)
@@ -299,25 +275,19 @@ class ReconciliationUploader:
 
     all_clusters.sort(key=cmp_to_key(compare))
     print("Uploading new reconciliation to sheet")
-    self.objects_to_sheet.upload_to_sheet(all_clusters, base_sheet_id,
-                                          "Reconciliation v2",
+    self.objects_to_sheet.upload_to_sheet(all_clusters, base_sheet_id, "Reconciliation v2",
                                           get_conditional_formatting_body)
 
   def fill_adjustments(self, all_clusters, base_sheet_id, tab_title) -> None:
     print("Filling in cost adjustments if applicable")
-    downloaded_clusters = self.objects_to_sheet.download_from_sheet(
-        clusters.from_row, base_sheet_id, tab_title)
+    downloaded_clusters = self.objects_to_sheet.download_from_sheet(clusters.from_row,
+                                                                    base_sheet_id, tab_title)
 
     for cluster in all_clusters:
-      candidate_downloads = self.find_candidate_downloads(
-          cluster, downloaded_clusters)
-      cluster.adjustment = sum(
-          [candidate.adjustment for candidate in candidate_downloads])
-      cluster.notes = "; ".join([
-          candidate.notes
-          for candidate in candidate_downloads
-          if candidate.notes.strip()
-      ])
+      candidate_downloads = self.find_candidate_downloads(cluster, downloaded_clusters)
+      cluster.adjustment = sum([candidate.adjustment for candidate in candidate_downloads])
+      cluster.notes = "; ".join(
+          [candidate.notes for candidate in candidate_downloads if candidate.notes.strip()])
       # Import the manual override boolean from the sheet's checkbox ONLY if:
       # (a) no clusters have been merged in since the last sheet export and
       # (b) there haven't been any new order IDs or tracking #s added to the
@@ -327,8 +297,6 @@ class ReconciliationUploader:
         if (sheet_cluster.trackings == cluster.trackings and
             sheet_cluster.orders == cluster.orders):
           cluster.manual_override = sheet_cluster.manual_override
-          cluster.below_cost = sheet_cluster.below_cost
-          cluster.verified = sheet_cluster.verified
 
   def find_candidate_downloads(self, cluster, downloaded_clusters) -> list:
     result = []
