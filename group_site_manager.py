@@ -2,7 +2,6 @@ import aiohttp
 import asyncio
 import collections
 import email
-import imaplib
 import quopri
 import re
 import requests
@@ -10,7 +9,6 @@ import sys
 import time
 import traceback
 import lib.email_auth as email_auth
-
 from bs4 import BeautifulSoup
 from lib.archive_manager import ArchiveManager
 from selenium import webdriver
@@ -77,12 +75,8 @@ class GroupSiteManager:
       try:
         return self.get_new_tracking_pos_costs_maps(group)
       except Exception as e:
-        print("Received exception when getting costs: " + str(e))
-        type, value, trace = sys.exc_info()
-        formatted_trace = traceback.format_tb(trace)
-        for line in formatted_trace:
-          print(line)
-        print("Retrying up to five times")
+        print(f"Received exception when getting costs: {str(e)}\n{util.get_traceback_lines()}\n"            print("Received exception when getting costs: " + str(e))
+              "Retrying up to five times.")
         last_exc = e
     raise Exception("Exceeded retry limit", last_exc)
 
@@ -136,6 +130,7 @@ class GroupSiteManager:
       # show all trackings, not just non-paid
       driver.find_element_by_css_selector('button[title="Filters"]').click()
       time.sleep(2)
+      driver.find_element_by_css_selector('div.modal-body button.ButtonLink').click()
       select = Select(driver.find_element_by_tag_name('select'))
       select.select_by_visible_text('Any')
 
@@ -159,7 +154,7 @@ class GroupSiteManager:
           tracking_cost_map[(tracking,)] += value
           po_cost_map[tracking] += value
     finally:
-      driver.close()
+      driver.quit()
     return tracking_to_po_map, tracking_cost_map, po_cost_map
 
   def _get_usa_login_headers(self):
@@ -284,7 +279,7 @@ class GroupSiteManager:
 
         return (tracking_to_po_map, po_to_cost_map, trackings_to_cost_map)
     finally:
-      driver.close()
+      driver.quit()
 
   def _upload_to_group(self, numbers, group) -> None:
     last_ex = None
@@ -313,13 +308,8 @@ class GroupSiteManager:
     time.sleep(3)
 
   def _upload_bfmr(self, numbers) -> None:
-    for batch in self.chunks(numbers, 30):
+    for batch in util.chunks(numbers, 30):
       self._upload_bfmr_batch(batch)
-
-  def chunks(self, lst, n):
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-      yield lst[i:i + n]
 
   def _upload_bfmr_batch(self, numbers) -> None:
     group_config = self.config['groups']['bfmr']
@@ -363,7 +353,7 @@ class GroupSiteManager:
           # Re-run this batch with only new numbers, if there are any
           self._upload_bfmr_batch(driver, new_numbers)
     finally:
-      driver.close()
+      driver.quit()
 
   def _upload_yrcw(self, numbers) -> None:
     driver = self._login_yrcw()
@@ -377,7 +367,7 @@ class GroupSiteManager:
       driver.find_element_by_xpath("//button[text() = 'Submit All']").click()
       time.sleep(2)
     finally:
-      driver.close()
+      driver.quit()
 
   def _upload_melul(self, numbers, group, username, password) -> None:
     driver = self._login_melul(group, username, password)
@@ -398,7 +388,7 @@ class GroupSiteManager:
       driver.find_element_by_xpath(SUBMIT_BUTTON_SELECTOR).click()
       time.sleep(1)
     finally:
-      driver.close()
+      driver.quit()
 
   def _login_melul(self, group, username, password) -> Any:
     # Always use no-headless for Melul portals for CAPTCHA solving,
@@ -522,7 +512,7 @@ class GroupSiteManager:
             break 
       return result 
     finally:  
-      driver.close()  
+      driver.quit()  
     
   def _get_usa_tracking_to_purchase_order(self) -> dict:  
     result = {} 
@@ -573,7 +563,7 @@ class GroupSiteManager:
             break 
       return result 
     finally:  
-      driver.close()  
+      driver.quit()  
     
   def _login_usa(self) -> Any:  
     driver = self.driver_creator.new()  
