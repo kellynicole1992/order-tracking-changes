@@ -75,7 +75,7 @@ class GroupSiteManager:
       try:
         return self.get_new_tracking_pos_costs_maps(group)
       except Exception as e:
-        print(f"Received exception when getting costs: {str(e)}\n{util.get_traceback_lines()}\n"            print("Received exception when getting costs: " + str(e))
+        print(f"Received exception when getting costs: {str(e)}\n{util.get_traceback_lines()}\n"
               "Retrying up to five times.")
         last_exc = e
     raise Exception("Exceeded retry limit", last_exc)
