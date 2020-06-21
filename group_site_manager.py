@@ -202,8 +202,7 @@ class GroupSiteManager:
     pos_to_prices = {}
     all_entries = self._get_usa_tracking_entries(headers)
     for entry in all_entries:
-      po_id = entry['purchase_id']
-      pos_to_prices[po_id] = float(entry['purchase']['amount'])
+      pos_to_prices[entry['purchase_id']] = float(entry['purchase']['amount'])
     tracking_numbers = [entry['tracking_number'] for entry in all_entries]
     tracking_to_po = {} 
     tracking_to_po = self._get_usa_tracking_to_purchase_order()
