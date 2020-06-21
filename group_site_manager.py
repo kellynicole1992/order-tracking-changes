@@ -9,6 +9,7 @@ import sys
 import time
 import traceback
 import lib.email_auth as email_auth
+from lib import util
 from bs4 import BeautifulSoup
 from lib.archive_manager import ArchiveManager
 from selenium import webdriver
